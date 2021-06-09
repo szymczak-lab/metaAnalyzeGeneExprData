@@ -1,0 +1,15 @@
+Package: metaAnalysisGeneExprData
+Type: Package
+Title: Meta-analysis of gene expression data sets
+Version: 0.0.0.9000
+Authors@R: person("Silke", "Szymczak", email = "silke.szymczak@uni-luebeck.de",
+  role = c("aut", "cre"))
+Description: Integrate results of multiple gene expression data sets using 
+    statistical meta-analysis approaches. The package contains functionality to 
+    run differential expression analysis for each study, perform quality 
+    control of the study-level results and summarize results using fixed and 
+    random effects meta-analysis including estimation of gene and study level 
+    heterogeneity.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
