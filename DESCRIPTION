@@ -13,3 +13,11 @@ Description: Integrate results of multiple gene expression data sets using
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
+Imports: 
+    limma,
+    methods,
+    rio,
+    stats,
+    SummarizedExperiment,
+    variancePartition
+RoxygenNote: 7.1.1
