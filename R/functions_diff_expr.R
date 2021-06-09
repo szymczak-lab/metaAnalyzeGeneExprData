@@ -9,7 +9,7 @@ run_diff_expr_analysis_dream <- function(
   var.id,
   res.file) {
 
-  ## define formulas
+  ## define formulas for linear mixed model
   form = paste0("~", var)
   if (!is.null(covar)) {
     form = paste0(form, "+",
@@ -18,6 +18,7 @@ run_diff_expr_analysis_dream <- function(
   form.random = paste0("(1|", var.id, ")")
   form.final = paste(form, form.random, sep = " + ")
 
+  ## extract expression data
   if (!(assay %in% names(SummarizedExperiment::assays(se)))) {
     stop(paste(assay, "not available in assays!"))
   }
@@ -33,32 +34,40 @@ run_diff_expr_analysis_dream <- function(
 
   }
 
+  ## extract phenotype data
   pheno = as.data.frame(
     SummarizedExperiment::colData(se)[, c(var, covar, var.id)])
 
+  ## differential expression analysis
   fitmm = variancePartition::dream(
     exprObj = expr,
     formula = stats::as.formula(form.final),
     data = pheno)
+
+  ## extract results and adjust for multiple testing
   res = limma::topTable(
     fitmm,
     coef = 2,
     number = nrow(expr),
     adjust.method = "BH",
     sort.by = "none")
-  res = data.frame(
-    SummarizedExperiment::rowData(se[rownames(res), ]),
-    res,
-    stringsAsFactors = FALSE)
+
+  ## calculate SE
+  res$SE = res$logFC / res$t
 
   ## add mean expression per group
   info.mean = estimate_means(gr = pheno[, var],
                              expr = expr)
-  if (!is.null(info.mean)) {
-    res = data.frame(res,
-                     info.mean)
-  }
 
+  ## store results in data.frame
+  res = data.frame(
+    gene = rownames(se),
+    res,
+    info.mean,
+    SummarizedExperiment::rowData(se),
+    stringsAsFactors = FALSE)
+
+  ## save in file
   rio::export(res,
               file = res.file)
   return(res)
