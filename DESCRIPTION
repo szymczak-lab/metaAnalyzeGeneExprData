@@ -14,8 +14,15 @@ License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Imports: 
+    circlize,
+    ComplexHeatmap,
+    cowplot,
+    ggplot2,
+    ggpubr,
+    grid,
     limma,
     methods,
+    RColorBrewer,
     rio,
     stats,
     SummarizedExperiment,
