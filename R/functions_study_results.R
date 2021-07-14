@@ -42,7 +42,8 @@ load_study_results <- function(info.studies,
              "platform",
              "file",
              paste("column",
-                   c("gene", "estimate", "se", "pvalue", "mean.expr"),
+                   c("gene", "estimate", "se", "pvalue", "mean.expr",
+                     "mean.gr.1", "mean.gr.2"),
                    sep = "."))
     for (c in cols) {
         if (!(c %in% colnames(info.studies))) {
@@ -80,10 +81,24 @@ load_study_results <- function(info.studies,
                                     column = info.i$column.pvalue),
             mean.expr = extract_column(dat = dat,
                                        column = info.i$column.mean.expr),
+            mean.gr.1 = extract_column(dat = dat,
+                                       column = info.i$column.mean.gr.1),
+            mean.gr.2 = extract_column(dat = dat,
+                                       column = info.i$column.mean.gr.2),
             stringsAsFactors = FALSE
         )
+
+        ## correct sign of estimate if necessary
+        temp = res[1, ]
+        if (sign(temp$mean.gr.1 - temp$mean.gr.2) !=
+            sign(temp$estimate)) {
+          res$estimate = -res$estimate
+        }
+        colnames(res)[6:7] = info.i[1,
+                                    c("column.mean.gr.1", "column.mean.gr.2")]
         res$pvalue.adj = stats::p.adjust(res$pvalue, method = "BH")
         rownames(res) = res$gene
+
         res.studies[[info.i$id]] = res
     }
 
