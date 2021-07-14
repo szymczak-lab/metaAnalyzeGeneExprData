@@ -22,7 +22,7 @@ run_diff_expr_analysis_dream <- function(
   if (!(assay %in% names(SummarizedExperiment::assays(se)))) {
     stop(paste(assay, "not available in assays!"))
   }
-  expr = SummarizedExperiment::assays(se)[[assay]]
+  expr = as.matrix(SummarizedExperiment::assays(se)[[assay]])
   if (!is.null(assay.voom.weights)) {
     if (!(assay.voom.weights %in% names(SummarizedExperiment::assays(se)))) {
       stop(paste(assay, "not available in assays!"))

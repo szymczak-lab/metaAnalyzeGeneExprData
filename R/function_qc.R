@@ -26,7 +26,7 @@
 qc_genes <- function(res.studies,
                      group = NULL) {
 
-  if (length(group) != length(res.studies)) {
+  if (!is.null(group) && length(group) != length(res.studies)) {
       stop("group information needs to be given for each study")
   }
 

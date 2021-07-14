@@ -43,7 +43,8 @@ run_meta_analysis <- function(res.studies,
       tau2 = res.random$tau2,
       I2 = res.random$I2,
       Q = res.random$QE,
-      pvalue.Q = res.random$QEp)
+      pvalue.Q = res.random$QEp,
+      freq.estimate.pos = sum(dat$estimate > 0) / res.fixed$k)
     res.all = rbind(res.all, res.g)
   }
   res.all = data.frame(gene = genes,
