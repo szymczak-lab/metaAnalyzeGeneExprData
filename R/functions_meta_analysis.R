@@ -1,16 +1,16 @@
 
 ## res.studies: list of results of differential expression analysis
-## freq.studies: only genes available in freq.studies of the studies will be used
+## min.no.studies: only genes available in min.no.studies will be used
 ## res.file: text file for saving results of fixed and random effect meta analysis
 #' @export
 run_meta_analysis <- function(res.studies,
-                              freq.studies = 0.5,
+                              min.no.studies = 3,
                               res.file) {
 
   ## extract genes to be used
   info.gene.names = unlist(lapply(res.studies, function(x) {x$gene}))
   tab.name = table(info.gene.names)
-  genes = sort(names(tab.name)[tab.name >= freq.studies * length(res.studies)])
+  genes = sort(names(tab.name)[tab.name >= min.no.studies])
 
   ## gene level meta analysis
   res.all = NULL
