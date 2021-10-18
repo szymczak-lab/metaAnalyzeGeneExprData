@@ -1,4 +1,4 @@
-Package: metaAnalysisGeneExprData
+Package: metaAnalyzeGeneExprData
 Type: Package
 Title: Meta-analysis of gene expression data sets
 Version: 0.0.0.9000
