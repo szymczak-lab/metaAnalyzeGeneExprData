@@ -21,7 +21,6 @@
 #' }
 #'
 #' @export
-
 qc_genes <- function(res.studies,
                      group = NULL) {
 

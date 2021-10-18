@@ -22,10 +22,10 @@
 #' \item column.mean.expr = name of column with mean expression value
 #' }
 #'
-#' @param info.studies data.frame with information about each
+#' @param info.studies [data.frame] information about each
 #' study (see Details).
-#' @param verbose Logical. Should additional information be printed? (default:
-#' TRUE).
+#' @param verbose [logical(1)] should additional information be printed?
+#' (default: TRUE).
 #'
 #' @return list of data.frames with study results
 #'

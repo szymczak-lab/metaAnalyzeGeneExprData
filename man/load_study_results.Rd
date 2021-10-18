@@ -7,11 +7,11 @@
 load_study_results(info.studies, verbose = TRUE)
 }
 \arguments{
-\item{info.studies}{data.frame with information about each
+\item{info.studies}{[data.frame] information about each
 study (see Details).}
 
-\item{verbose}{Logical. Should additional information be printed? (default:
-TRUE).}
+\item{verbose}{[logical(1)] should additional information be printed?
+(default: TRUE).}
 }
 \value{
 list of data.frames with study results
