@@ -169,91 +169,97 @@ qc_diff_expr_genes <- function(res.studies,
     x$gene})
 
   no.genes = sapply(genes.de.l, length)
-  g.no = my_boxplot(values = no.genes,
-                    group = group,
-                    title = "Number of differentially expressed genes",
-                    ylab = "number of genes")
-
-  ## proportion of differentially expressed genes per study
-  prop.genes = no.genes / sapply(res.studies, nrow)
-  g.prop = my_boxplot(values = prop.genes,
+  if (sum(no.genes > 0) > 1) {
+    g.no = my_boxplot(values = no.genes,
                       group = group,
-                      title = "Frequency of differentially expressed genes",
-                      ylab = "relative frequency")
-
-  ## proportion of upregulated differentially expressed genes per study
-  no.genes.up = sapply(res.studies.de, function(x) {
-    sum(x$estimate > 0)})
-  prop.genes.up = no.genes.up / no.genes
-  g.prop.up = my_boxplot(values = prop.genes.up,
-                         group = group,
-                         title = "Frequency of upregulated differentially expressed genes",
-                         ylab = "relative frequency")
-
-  ## number of studies for each gene
-  freq.genes = table(unlist(genes.de.l))
-  tab = table(factor(freq.genes, levels = seq_len(k)))
-  dat = data.frame(no.studies = names(tab),
-                   freq = as.numeric(tab))
-  g.cov = ggpubr::ggbarplot(
-    dat,
-    x = "no.studies",
-    y = "freq",
-    fill = "lightgray",
-    xlab = "number of studies",
-    ylab = "absolute frequency",
-    title = "Coverage of differentially expressed genes") +
-    ggplot2::theme_bw()
-
-  ## overlap
-  overlap = matrix(nrow = k, ncol = k,
-                   dimnames = list(names(res.studies.de),
-                                   names(res.studies.de)))
-  for (i in 1:(k - 1)) {
-    for (j in (i + 1):k) {
-      genes.both = intersect(genes.de.l[[i]],
-                             genes.de.l[[j]])
-      if (length(genes.both) > 0) {
-        overlap[i, j] = overlap[j, i] =
-          sum(sign(res.studies.de[[i]][genes.both, "estimate"]) ==
-                sign(res.studies.de[[j]][genes.both, "estimate"]),
-              na.rm = TRUE)
+                      title = "Number of differentially expressed genes",
+                      ylab = "number of genes")
+    
+    ## proportion of differentially expressed genes per study
+    prop.genes = no.genes / sapply(res.studies, nrow)
+    g.prop = my_boxplot(values = prop.genes,
+                        group = group,
+                        title = "Frequency of differentially expressed genes",
+                        ylab = "relative frequency")
+    
+    ## proportion of upregulated differentially expressed genes per study
+    no.genes.up = sapply(res.studies.de, function(x) {
+      sum(x$estimate > 0)})
+    prop.genes.up = no.genes.up / no.genes
+    g.prop.up = my_boxplot(values = prop.genes.up,
+                           group = group,
+                           title = "Frequency of upregulated differentially expressed genes",
+                           ylab = "relative frequency")
+    
+    ## number of studies for each gene
+    freq.genes = table(unlist(genes.de.l))
+    tab = table(factor(freq.genes, levels = seq_len(k)))
+    dat = data.frame(no.studies = names(tab),
+                     freq = as.numeric(tab))
+    g.cov = ggpubr::ggbarplot(
+      dat,
+      x = "no.studies",
+      y = "freq",
+      fill = "lightgray",
+      xlab = "number of studies",
+      ylab = "absolute frequency",
+      title = "Coverage of differentially expressed genes") +
+      ggplot2::theme_bw()
+    
+    ## overlap
+    overlap = matrix(nrow = k, ncol = k,
+                     dimnames = list(names(res.studies.de),
+                                     names(res.studies.de)))
+    for (i in 1:(k - 1)) {
+      for (j in (i + 1):k) {
+        genes.both = intersect(genes.de.l[[i]],
+                               genes.de.l[[j]])
+        if (length(genes.both) > 0) {
+          overlap[i, j] = overlap[j, i] =
+            sum(sign(res.studies.de[[i]][genes.both, "estimate"]) ==
+                  sign(res.studies.de[[j]][genes.both, "estimate"]),
+                na.rm = TRUE)
+        }
       }
     }
+    med.overlap = apply(overlap, 1, stats::median, na.rm = TRUE)
+    diag(overlap) = no.genes
+    h = my_heatmap(matrix = overlap,
+                   title = "Overlapping differentially and consistent genes",
+                   name = "number",
+                   type = "other")
+    
+    ## plots
+    # g = ggdraw() +
+    #     draw_plot(g.no, x = 0, y = 0, width = 0.3, height = 1) +
+    #     draw_plot(g.cov, x = 0.3, y = 0, width = 0.7, height = 1)
+    g = cowplot::ggdraw() +
+      cowplot::draw_plot(g.no, x = 0, y = 0.75, width = 0.5, height = 0.25) +
+      cowplot::draw_plot(g.prop.up, x = 0.5, y = 0.75, width = 0.5, height = 0.25) +
+      cowplot::draw_plot(g.cov, x = 0, y = 0.5, width = 1, height = 0.25) +
+      cowplot::draw_plot(
+        grid::grid.grabExpr(ComplexHeatmap::draw(h)),
+        x = 0.25, y = 0, width = 0.5, height = 0.5)
+    print(g)
+    
+    ## statistics
+    stats = data.frame(id = names(res.studies),
+                       number.diff.expr.genes = no.genes,
+                       number.diff.expr.genes.outlier =
+                         get_outlier_info(values = no.genes),
+                       freq.up.genes = prop.genes.up,
+                       freq.up.genes.outlier =
+                         get_outlier_info(values = prop.genes.up),
+                       median.overlapping.genes = med.overlap,
+                       median.overlapping.genes.outlier =
+                         get_outlier_info(values = med.overlap),
+                       stringsAsFactors = FALSE)
+  } else {
+    stats = data.frame(id = names(res.studies),
+                       number.diff.expr.genes = no.genes,
+                       stringsAsFactors = FALSE)
   }
-  med.overlap = apply(overlap, 1, stats::median, na.rm = TRUE)
-  diag(overlap) = no.genes
-  h = my_heatmap(matrix = overlap,
-                 title = "Overlapping differentially and consistent genes",
-                 name = "number",
-                 type = "other")
-
-  ## plots
-  # g = ggdraw() +
-  #     draw_plot(g.no, x = 0, y = 0, width = 0.3, height = 1) +
-  #     draw_plot(g.cov, x = 0.3, y = 0, width = 0.7, height = 1)
-  g = cowplot::ggdraw() +
-    cowplot::draw_plot(g.no, x = 0, y = 0.75, width = 0.5, height = 0.25) +
-    cowplot::draw_plot(g.prop.up, x = 0.5, y = 0.75, width = 0.5, height = 0.25) +
-    cowplot::draw_plot(g.cov, x = 0, y = 0.5, width = 1, height = 0.25) +
-    cowplot::draw_plot(
-      grid::grid.grabExpr(ComplexHeatmap::draw(h)),
-      x = 0.25, y = 0, width = 0.5, height = 0.5)
-  print(g)
-
-  ## statistics
-  stats = data.frame(id = names(res.studies),
-                     number.diff.expr.genes = no.genes,
-                     number.diff.expr.genes.outlier =
-                       get_outlier_info(values = no.genes),
-                     freq.up.genes = prop.genes.up,
-                     freq.up.genes.outlier =
-                       get_outlier_info(values = prop.genes.up),
-                     median.overlapping.genes = med.overlap,
-                     median.overlapping.genes.outlier =
-                       get_outlier_info(values = med.overlap),
-                     stringsAsFactors = FALSE)
-
+  
   return(stats)
 }
 
