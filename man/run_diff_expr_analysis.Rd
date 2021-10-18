@@ -53,7 +53,7 @@ more information):
 \item t = moderated t statistic corresponding to var
 \item P.Value = P-value corresponding to var
 \item adj.P.Value = P-value corresponding to var after adjustment for 
-multiple testing using Benjamini-Hochberg approach
+multiple testing using the Benjamini-Hochberg approach
 \item SE = standard error corresponding to var
 \item mean.<group1> mean expression value in group 1 (if applicable)
 \item mean.<group2> mean expression value in group 2 (if applicable)
