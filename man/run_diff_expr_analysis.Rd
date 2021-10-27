@@ -11,6 +11,7 @@ run_diff_expr_analysis(
   var,
   covar = NULL,
   var.id = NULL,
+  var.ref.level = NULL,
   res.file
 )
 }
@@ -32,6 +33,9 @@ definition); needs to be available in colData() of se.}
 \item{var.id}{[character(1)] name of variable with subject identifiers; 
 needs to be available in colData() of se. If given, a linear mixed model 
 with subject identifers as random effect is fitted.}
+
+\item{var.ref.level}{[character(1)] name of reference category for variable
+of interest.}
 
 \item{res.file}{[character(1)] name of file for saving results.}
 }

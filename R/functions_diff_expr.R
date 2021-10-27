@@ -36,6 +36,8 @@
 #' @param var.id [character(1)] name of variable with subject identifiers; 
 #' needs to be available in colData() of se. If given, a linear mixed model 
 #' with subject identifers as random effect is fitted.
+#' @param var.ref.level [character(1)] name of reference category for variable
+#' of interest.
 #' @param res.file [character(1)] name of file for saving results.
 #' 
 #' @export
@@ -46,6 +48,7 @@ run_diff_expr_analysis <- function(
   var,
   covar = NULL,
   var.id = NULL,
+  var.ref.level = NULL,
   res.file) {
   
   ## define formulas for linear (mixed) model
@@ -78,6 +81,15 @@ run_diff_expr_analysis <- function(
   ## extract phenotype data
   pheno = as.data.frame(
     SummarizedExperiment::colData(se)[, c(var, covar, var.id), drop = FALSE])
+  
+  ## set reference level
+  if (!is.null(var.ref.level)) {
+    if (length(unique(pheno[, var])) > 5) {
+      warning(paste("variable", var, "has more than 5 different values\n"))
+    }
+    pheno[, var] = stats::relevel(factor(pheno[, var]),
+                                  ref = var.ref.level)
+  }
   
   ## differential expression analysis
   # linear model
