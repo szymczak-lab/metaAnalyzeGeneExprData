@@ -84,8 +84,8 @@ load_study_results <- function(
       stringsAsFactors = FALSE
     )
     
-    if ("mean.gr.1" %in% colnames(info.studies) &&
-        "mean.gr.2" %in% colnames(info.studies)) {
+    if ("column.mean.gr.1" %in% colnames(info.studies) &&
+        "column.mean.gr.2" %in% colnames(info.studies)) {
       res = data.frame(
         res,
         mean.gr.1 = extract_column(dat = dat,
