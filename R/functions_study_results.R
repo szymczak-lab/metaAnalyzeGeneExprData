@@ -93,14 +93,6 @@ load_study_results <- function(
         mean.gr.2 = extract_column(dat = dat,
                                    column = info.i$column.mean.gr.2))
       
-      ## correct sign of estimate if necessary
-      temp = res[1, ]
-      if (sign(temp$mean.gr.1 - temp$mean.gr.2) !=
-          sign(temp$estimate)) {
-        res$estimate = -res$estimate
-      }
-      colnames(res)[6:7] = info.i[1,
-                                  c("column.mean.gr.1", "column.mean.gr.2")]
     }
     
     res$pvalue.adj = stats::p.adjust(res$pvalue, method = "BH")
