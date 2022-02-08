@@ -20,19 +20,23 @@ list of data.frames with study results
 Load results of study specific differential expression analysis.
 }
 \details{
-The data.frame info.studies needs to contain the following columns:
+The data.frame info.studies has to contain the following required and 
+optional columns:
 \itemize{
-\item id = unique study identifier
+\item id = unique study identifier (required)
 \item number.subjects = number of study subjects
 \item number.samples = number of study samples (might be identical to
 number.subjects)
 \item technology = technology (e.g. "RNA-seq" or "array")
 \item platform = specific array or sequencing platform
-\item file = path to text file with study results
-\item column.gene = name of column with gene identifier
-\item column.estimate = name of column with estimate (e.g. beta coefficient)
-\item column.se = name of column with standard error
+\item file = path to text file with study results (required)
+\item column.gene = name of column with gene identifier (required)
+\item column.estimate = name of column with estimate (e.g. beta coefficient) 
+(required)
+\item column.se = name of column with standard error (required)
 \item column.pvalue = name of column with unadjusted P value
 \item column.mean.expr = name of column with mean expression value
+\item column.mean.gr.1 = name of column with mean expression value in group 1
+\item column.mean.gr.2 = name of column with mean expression value in group 2
 }
 }

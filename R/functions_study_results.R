@@ -6,20 +6,24 @@
 #'
 #' Load results of study specific differential expression analysis.
 #'
-#' The data.frame info.studies needs to contain the following columns:
+#' The data.frame info.studies has to contain the following required and 
+#' optional columns:
 #' \itemize{
-#' \item id = unique study identifier
+#' \item id = unique study identifier (required)
 #' \item number.subjects = number of study subjects
 #' \item number.samples = number of study samples (might be identical to
 #' number.subjects)
 #' \item technology = technology (e.g. "RNA-seq" or "array")
 #' \item platform = specific array or sequencing platform
-#' \item file = path to text file with study results
-#' \item column.gene = name of column with gene identifier
-#' \item column.estimate = name of column with estimate (e.g. beta coefficient)
-#' \item column.se = name of column with standard error
+#' \item file = path to text file with study results (required)
+#' \item column.gene = name of column with gene identifier (required)
+#' \item column.estimate = name of column with estimate (e.g. beta coefficient) 
+#' (required)
+#' \item column.se = name of column with standard error (required)
 #' \item column.pvalue = name of column with unadjusted P value
 #' \item column.mean.expr = name of column with mean expression value
+#' \item column.mean.gr.1 = name of column with mean expression value in group 1
+#' \item column.mean.gr.2 = name of column with mean expression value in group 2
 #' }
 #'
 #' @param info.studies [data.frame] information about each
@@ -35,21 +39,21 @@ load_study_results <- function(
   verbose = TRUE) {
   
   ## check column names
-  cols = c("id",
-           "number.subjects",
-           "number.samples",
-           "technology",
-           "platform",
-           "file",
-           paste("column",
-                 c("gene", "estimate", "se", "pvalue", "mean.expr",
-                   "mean.gr.1", "mean.gr.2"),
-                 sep = "."))
-  cols.not.found = setdiff(cols, colnames(info.studies))
+  cols.req = c("id",
+               "file",
+               paste("column", 
+                     c("gene", "estimate", "se"),
+                     sep = "."))
+  cols.opt = c(paste("column",
+                     c("pvalue", "mean.expr",
+                       "mean.gr.1", "mean.gr.2"),
+                     sep = "."))
+  cols.not.found = setdiff(cols.req, colnames(info.studies))
   if (length(cols.not.found) > 0) {
-    warning(paste0("Some columns not found in info.studies:\n",
+    stop(paste0("Some columns not found in info.studies:\n",
                    paste(cols.not.found, collapse = ", "), "\n"))
   }
+  cols.use = grep("^column", c(cols.req, cols.opt), value = TRUE)
   
   k = nrow(info.studies)
   res.studies = vector("list", length = k)
@@ -70,47 +74,40 @@ load_study_results <- function(
     
     dat = check_gene_ids(dat = dat)
     
-    res = data.frame(
-      gene = extract_column(dat = dat,
-                            column = info.i$column.gene),
-      estimate = extract_column(dat = dat,
-                                column = info.i$column.estimate),
-      se = extract_column(dat = dat,
-                          column = info.i$column.se),
-      pvalue = extract_column(dat = dat,
-                              column = info.i$column.pvalue),
-      mean.expr = extract_column(dat = dat,
-                                 column = info.i$column.mean.expr),
-      stringsAsFactors = FALSE
-    )
-    
-    if ("column.mean.gr.1" %in% colnames(info.studies) &&
-        "column.mean.gr.2" %in% colnames(info.studies)) {
-      res = data.frame(
-        res,
-        mean.gr.1 = extract_column(dat = dat,
-                                   column = info.i$column.mean.gr.1),
-        mean.gr.2 = extract_column(dat = dat,
-                                   column = info.i$column.mean.gr.2))
-      
+    res = NULL
+    for (c in cols.use) {
+      if (!(c %in% colnames(info.i))) {
+        warning(paste("column", c, "not available in info.studies!\n"))
+        info.col = rep(NA, nrow(dat))
+      } else {
+        c.use = info.i[, c]
+        if (!(c.use %in% colnames(dat))) {
+          warning(paste("column", c.use, "not available in dat\n!"))
+          info.col = rep(NA, nrow(dat))
+        } else {
+          info.col = dat[, c.use]
+        }
+      }
+      if (is.null(res)) {
+        res = data.frame(
+          info.col,
+          stringsAsFactors = FALSE)
+      } else {
+        res = data.frame(
+          res,
+          info.col,
+          stringsAsFactors = FALSE)
+      }
     }
+    colnames(res) = gsub("column.", "", cols.use)
+    rownames(res) = res$gene
     
     res$pvalue.adj = stats::p.adjust(res$pvalue, method = "BH")
-    rownames(res) = res$gene
     
     res.studies[[info.i$id]] = res
   }
   
   return(res.studies)
-}
-
-#' internal function
-#' @keywords internal
-extract_column <- function(dat, column) {
-  if (!(column %in% colnames(dat))) {
-    stop(paste("column", column, "not available!"))
-  }
-  return(dat[, column])
 }
 
 #' internal function

@@ -61,8 +61,7 @@ run_meta_analysis <- function(res.studies,
   for (g in genes) {
     dat = stats::na.omit(data.frame(
       estimate = sapply(res.studies, function(x) {x[g, "estimate"]}),
-      se = sapply(res.studies, function(x) {x[g, "se"]}),
-      pvalue = sapply(res.studies, function(x) {x[g, "pvalue"]})))
+      se = sapply(res.studies, function(x) {x[g, "se"]})))
 
     res.fixed = metafor::rma.uni(
       yi = dat$estimate,
