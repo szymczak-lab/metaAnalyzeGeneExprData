@@ -169,7 +169,7 @@ qc_diff_expr_genes <- function(res.studies,
     x$gene})
 
   no.genes = sapply(genes.de.l, length)
-  if (sum(no.genes > 0) > 1) {
+  if (sum(no.genes > 0) > 2) {
     g.no = my_boxplot(values = no.genes,
                       group = group,
                       title = "Number of differentially expressed genes",
@@ -224,6 +224,13 @@ qc_diff_expr_genes <- function(res.studies,
     }
     med.overlap = apply(overlap, 1, stats::median, na.rm = TRUE)
     diag(overlap) = no.genes
+    
+    ## remove studies with no differentially expressed genes
+    ind = which(no.genes == 0)
+    if (length(ind) > 0) {
+      overlap = overlap[-ind, -ind]
+    }
+    
     h = my_heatmap(matrix = overlap,
                    title = "Overlapping differentially and consistent genes",
                    name = "number",
