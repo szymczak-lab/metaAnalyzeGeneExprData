@@ -4,7 +4,13 @@
 \alias{run_meta_analysis}
 \title{Meta analysis of multiple studies}
 \usage{
-run_meta_analysis(res.studies, min.no.studies = 3, res.file)
+run_meta_analysis(
+  res.studies,
+  min.no.studies = 3,
+  fixed = TRUE,
+  random = TRUE,
+  res.file
+)
 }
 \arguments{
 \item{res.studies}{[list] results of study specific differential expression 
@@ -13,6 +19,12 @@ analyses (e.g. loaded by \code{\link{load_study_results}}).}
 \item{min.no.studies}{[numeric(1)] minimal number of studies for which gene
 level results need to be available in order to be included in the meta
 analysis.}
+
+\item{fixed}{[logical(1)] should fixed effect meta analysis be performed? 
+(default: TRUE).}
+
+\item{random}{[logical(1)] should random effect meta analysis be performed? 
+(default: TRUE).}
 
 \item{res.file}{[character(1)] name of file for saving results.}
 }

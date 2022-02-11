@@ -44,13 +44,23 @@
 #' @param min.no.studies [numeric(1)] minimal number of studies for which gene
 #' level results need to be available in order to be included in the meta
 #' analysis.
+#' @param fixed [logical(1)] should fixed effect meta analysis be performed? 
+#' (default: TRUE).
+#' @param random [logical(1)] should random effect meta analysis be performed? 
+#' (default: TRUE).
 #' @param res.file [character(1)] name of file for saving results.
 #' 
 #' @export
 run_meta_analysis <- function(res.studies,
                               min.no.studies = 3,
+                              fixed = TRUE,
+                              random = TRUE,
                               res.file) {
 
+  if (!fixed & !random) {
+    stop("at least one of fixed or random needs to be set to TRUE")
+  }
+  
   ## extract genes to be used
   info.gene.names = unlist(lapply(res.studies, function(x) {x$gene}))
   tab.name = table(info.gene.names)
@@ -63,14 +73,24 @@ run_meta_analysis <- function(res.studies,
       estimate = sapply(res.studies, function(x) {x[g, "estimate"]}),
       se = sapply(res.studies, function(x) {x[g, "se"]})))
 
-    res.fixed = metafor::rma.uni(
-      yi = dat$estimate,
-      sei = dat$se,
-      method = "FE")
-    res.random = metafor::rma.uni(
-      yi = dat$estimate,
-      sei = dat$se,
-      method = "DL")
+    if (fixed) {
+      res.fixed = metafor::rma.uni(
+        yi = dat$estimate,
+        sei = dat$se,
+        method = "FE")
+    } else {
+      res.fixed = NULL
+    }
+    
+    if (random) {
+      res.random = metafor::rma.uni(
+        yi = dat$estimate,
+        sei = dat$se,
+        method = "DL")
+    } else {
+      res.random = NULL
+    }
+    
     res.g = c(
       number.studies = res.fixed$k,
       estimate.fixed = res.fixed$beta,
@@ -95,13 +115,17 @@ run_meta_analysis <- function(res.studies,
                        stringsAsFactors = FALSE)
 
   ## adjust P-values
-  res.all$pvalue.fixed.adj = stats::p.adjust(
-    res.all$pvalue.fixed,
-    method = "BH")
-  res.all$pvalue.random.adj = stats::p.adjust(
-    res.all$pvalue.random,
-    method = "BH")
-
+  if (fixed) {
+    res.all$pvalue.fixed.adj = stats::p.adjust(
+      res.all$pvalue.fixed,
+      method = "BH")
+  }
+  if (random) {
+    res.all$pvalue.random.adj = stats::p.adjust(
+      res.all$pvalue.random,
+      method = "BH")
+  }
+  
   rio::export(res.all,
               file = res.file)
 }
