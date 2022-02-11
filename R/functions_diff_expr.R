@@ -39,6 +39,8 @@
 #' @param var.ref.level [character(1)] name of reference category for variable
 #' of interest.
 #' @param res.file [character(1)] name of file for saving results.
+#' @param BPPARAM [bpparamClass] parameters for parallel evaluation (see
+#' \code{\link[BiocParallel]{bpparam}} for more information).
 #' 
 #' @export
 run_diff_expr_analysis <- function(
@@ -49,7 +51,8 @@ run_diff_expr_analysis <- function(
   covar = NULL,
   var.id = NULL,
   var.ref.level = NULL,
-  res.file) {
+  res.file,
+  BPPARAM = BiocParallel::bpparam()) {
   
   ## define formulas for linear (mixed) model
   form = paste0("~", var)
@@ -103,7 +106,8 @@ run_diff_expr_analysis <- function(
     fit = variancePartition::dream(
       exprObj = expr,
       formula = stats::as.formula(form),
-      data = pheno)
+      data = pheno, 
+      BPPARAM = BPPARAM)
   }
   
   ## extract results and adjust for multiple testing

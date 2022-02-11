@@ -12,7 +12,8 @@ run_diff_expr_analysis(
   covar = NULL,
   var.id = NULL,
   var.ref.level = NULL,
-  res.file
+  res.file,
+  BPPARAM = BiocParallel::bpparam()
 )
 }
 \arguments{
@@ -38,6 +39,9 @@ with subject identifers as random effect is fitted.}
 of interest.}
 
 \item{res.file}{[character(1)] name of file for saving results.}
+
+\item{BPPARAM}{[bpparamClass] parameters for parallel evaluation (see
+\code{\link[BiocParallel]{bpparam}} for more information).}
 }
 \description{
 Perform differential expression analysis of a single study. If a variable 
