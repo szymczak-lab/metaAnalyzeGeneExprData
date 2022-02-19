@@ -38,6 +38,8 @@
 #' with subject identifers as random effect is fitted.
 #' @param var.ref.level [character(1)] name of reference category for variable
 #' of interest.
+#' @param standardize [logical(1)] should expression values be standardized (centered
+#' and scaled) before analysis? (default: TRUE).
 #' @param res.file [character(1)] name of file for saving results.
 #' @param BPPARAM [bpparamClass] parameters for parallel evaluation (see
 #' \code{\link[BiocParallel]{bpparam}} for more information).
@@ -51,6 +53,7 @@ run_diff_expr_analysis <- function(
   covar = NULL,
   var.id = NULL,
   var.ref.level = NULL,
+  standardize = TRUE,
   res.file,
   BPPARAM = BiocParallel::bpparam()) {
   
@@ -64,26 +67,16 @@ run_diff_expr_analysis <- function(
     form.random = paste0("(1|", var.id, ")")
     form = paste(form, form.random, sep = " + ")
   }
-  
-  ## extract expression data
-  if (!(assay %in% names(SummarizedExperiment::assays(se)))) {
-    stop(paste(assay, "not available in assays!"))
-  }
-  expr = as.matrix(SummarizedExperiment::assays(se)[[assay]])
-  if (!is.null(assay.voom.weights)) {
-    if (!(assay.voom.weights %in% names(SummarizedExperiment::assays(se)))) {
-      stop(paste(assay, "not available in assays!"))
-    }
-    weights = SummarizedExperiment::assays(se)[[assay.voom.weights]]
-    expr = methods::new("EList",
-                        list(E = expr,
-                             weights = weights))
-    
-  }
-  
+
   ## extract phenotype data
   pheno = as.data.frame(
     SummarizedExperiment::colData(se)[, c(var, covar, var.id), drop = FALSE])
+  
+  ## remove individuals with missing values
+  pheno = stats::na.omit(pheno)
+  if (nrow(pheno) < 3) {
+    stop("less than 3 observations for analysis!")
+  }
   
   ## set reference level
   if (!is.null(var.ref.level)) {
@@ -94,6 +87,29 @@ run_diff_expr_analysis <- function(
                                   ref = var.ref.level)
   }
   
+  ## extract expression data
+  if (!(assay %in% names(SummarizedExperiment::assays(se)))) {
+    stop(paste(assay, "not available in assays!"))
+  }
+  expr = as.matrix(SummarizedExperiment::assays(se)[[assay]])[, rownames(pheno)]
+  
+  ## standardize per gene
+  if (standardize) {
+    expr = t(apply(expr, 1, function(x) {
+      (x - mean(x, nar.rm = TRUE)) / stats::sd(x, na.rm = TRUE)}))
+  }
+  
+  ## add VOOM weights
+  if (!is.null(assay.voom.weights)) {
+    if (!(assay.voom.weights %in% names(SummarizedExperiment::assays(se)))) {
+      stop(paste(assay, "not available in assays!"))
+    }
+    weights = SummarizedExperiment::assays(se)[[assay.voom.weights]]
+    expr = methods::new("EList",
+                        list(E = expr,
+                             weights = weights))
+  }
+
   ## differential expression analysis
   # linear model
   if (is.null(var.id)) {

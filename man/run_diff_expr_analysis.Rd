@@ -12,6 +12,7 @@ run_diff_expr_analysis(
   covar = NULL,
   var.id = NULL,
   var.ref.level = NULL,
+  standardize = TRUE,
   res.file,
   BPPARAM = BiocParallel::bpparam()
 )
@@ -37,6 +38,9 @@ with subject identifers as random effect is fitted.}
 
 \item{var.ref.level}{[character(1)] name of reference category for variable
 of interest.}
+
+\item{standardize}{[logical(1)] should expression values be standardized (centered
+and scaled) before analysis? (default: TRUE).}
 
 \item{res.file}{[character(1)] name of file for saving results.}
 
