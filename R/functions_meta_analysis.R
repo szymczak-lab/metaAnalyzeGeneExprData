@@ -49,13 +49,16 @@
 #' @param random [logical(1)] should random effect meta analysis be performed? 
 #' (default: TRUE).
 #' @param res.file [character(1)] name of file for saving results.
+#' @param anno [data.frame] data.frame including annotation information 
+#' with gene identifiers as row names (default: NULL).
 #' 
 #' @export
 run_meta_analysis <- function(res.studies,
                               min.no.studies = 3,
                               fixed = TRUE,
                               random = TRUE,
-                              res.file) {
+                              res.file,
+                              anno = NULL) {
 
   if (!fixed & !random) {
     stop("at least one of fixed or random needs to be set to TRUE")
@@ -124,6 +127,25 @@ run_meta_analysis <- function(res.studies,
     res.all$pvalue.random.adj = stats::p.adjust(
       res.all$pvalue.random,
       method = "BH")
+  }
+  
+  ## add annotation information
+  if (!is.null(anno)) {
+    if (length(intersect(rownames(anno), res.all$gene)) == 0) {
+      stop(paste("gene identifiers in annotation information and study results",
+                 "do not match"))
+    }
+    if (length(setdiff(res.all$gene, rownames(anno))) > 0) {
+      warning(paste("some gene identifiers not available in annotation",
+                    "information"))
+    }
+    
+    res.all = merge(
+      res.all, 
+      anno,
+      all.x = TRUE, 
+      by.x = "gene",
+      by.y = "row.names")
   }
   
   rio::export(res.all,

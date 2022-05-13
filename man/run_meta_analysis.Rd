@@ -9,7 +9,8 @@ run_meta_analysis(
   min.no.studies = 3,
   fixed = TRUE,
   random = TRUE,
-  res.file
+  res.file,
+  anno = NULL
 )
 }
 \arguments{
@@ -27,6 +28,9 @@ analysis.}
 (default: TRUE).}
 
 \item{res.file}{[character(1)] name of file for saving results.}
+
+\item{anno}{[data.frame] data.frame including annotation information 
+with gene identifiers as row names (default: NULL).}
 }
 \description{
 Perform fixed and random effect meta analysis for each gene across multiple
