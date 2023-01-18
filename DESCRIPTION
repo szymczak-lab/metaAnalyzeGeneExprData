@@ -1,7 +1,7 @@
 Package: metaAnalyzeGeneExprData
 Type: Package
 Title: Meta-analysis of gene expression data sets
-Version: 0.0.0.9000
+Version: 0.0.0.9001
 Authors@R: person("Silke", "Szymczak", email = "silke.szymczak@uni-luebeck.de",
   role = c("aut", "cre"))
 Description: Integrate results of multiple gene expression data sets using 
@@ -28,4 +28,4 @@ Imports:
     stats,
     SummarizedExperiment,
     variancePartition
-RoxygenNote: 7.2.0
+RoxygenNote: 7.2.1
