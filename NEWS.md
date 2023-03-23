@@ -1,4 +1,16 @@
 
+# metaAnalyzeGeneExprData 0.1.0
+
+## modifications
+
+run_diff_expr_analysis()
+- change output to list
+
+## new features
+
+run_diff_expr_analysis()
+- estimating and adjusting for surrogate variables
+
 # metaAnalyzeGeneExprData 0.0.0.9001
 
 ## bug fix

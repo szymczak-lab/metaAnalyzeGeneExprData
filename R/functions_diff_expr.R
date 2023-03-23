@@ -1,4 +1,7 @@
 
+## Information about normalization of counts, svaseq and limma from:
+## https://github.com/ben-laufer/RNA-seq/blob/main/04-limma-voom.R
+
 #' Differential expression analysis of single study
 #'
 #' Perform differential expression analysis of a single study. If a variable 
@@ -7,9 +10,9 @@
 #' \code{\link[variancePartition]{dream}}. Otherwise a linear model as 
 #' implemented in \code{\link[limma]{lmFit}} is fitted.
 #' 
-#' This function writes a file with the following results of the differential
-#' expression analysis for each gene (see \code{\link[limma]{topTable}} for 
-#' more information):
+#' This function writes a file with the following results of the 
+#' differential expression analysis for each gene (see 
+#' \code{\link[limma]{topTable}} for more information):
 #' \itemize{
 #' \item gene = gene name (corresponding to rownames() of se)
 #' \item logFC = log2 fold change corresponding to beta estimate of var
@@ -26,9 +29,7 @@
 #' 
 #' @param se [SummarizedExperiment object] study data.
 #' @param assay [character(1)] name of assay with expression data for the 
-#' differential expression analysis.
-#' @param assay.voom.weights [character(1)] name of assay with weights from 
-#' \code{\link[limma]{voom}} transformed (might be applied to RNAseq data).
+#' differential expression analysis. Needs to be "counts" for RNASeq data.
 #' @param var [character(1)] name of variable of interest (e.g. group 
 #' definition); needs to be available in colData() of se.
 #' @param covar [character(n)] additional covariates to be used in the linear
@@ -38,9 +39,14 @@
 #' with subject identifers as random effect is fitted.
 #' @param var.ref.level [character(1)] name of reference category for variable
 #' of interest.
+#' @param sv [logical(1)] should surrogate variables be estimated and used as 
+#' (additional) covariates? (default: FALSE).
+#' @param sv.file [character(1)] name of file for saving surrogate variables
+#' (default: NULL so that surrogate variables are not saved). Note that no file
+#' will be created if no surrogate variables could be identified.
 #' @param standardize [logical(1)] should expression values be standardized (centered
 #' and scaled) before analysis? (default: TRUE).
-#' @param res.file [character(1)] name of file for saving results.
+#' @param res.file [character(1)] name of file for saving gene level results.
 #' @param BPPARAM [bpparamClass] parameters for parallel evaluation (see
 #' \code{\link[BiocParallel]{bpparam}} for more information).
 #' 
@@ -48,26 +54,21 @@
 run_diff_expr_analysis <- function(
   se,
   assay,
-  assay.voom.weights = NULL,
   var,
   covar = NULL,
   var.id = NULL,
   var.ref.level = NULL,
+  sv = FALSE,
+  sv.file = NULL,
   standardize = TRUE,
   res.file,
   BPPARAM = BiocParallel::bpparam()) {
   
-  ## define formulas for linear (mixed) model
-  form = paste0("~", var)
   if (!is.null(covar)) {
-    form = paste0(form, "+",
-                  paste(covar, collapse = "+"))
+    ## check covariates in sva and voom 
+    stop("covariate adjustment not yet implemented for RNASeq!")
   }
-  if (!is.null(var.id)) {
-    form.random = paste0("(1|", var.id, ")")
-    form = paste(form, form.random, sep = " + ")
-  }
-
+  
   ## extract phenotype data
   pheno = as.data.frame(
     SummarizedExperiment::colData(se)[, c(var, covar, var.id), drop = FALSE])
@@ -91,23 +92,63 @@ run_diff_expr_analysis <- function(
   if (!(assay %in% names(SummarizedExperiment::assays(se)))) {
     stop(paste(assay, "not available in assays!"))
   }
-  expr = as.matrix(SummarizedExperiment::assays(se)[[assay]])[, rownames(pheno)]
+  expr = as.matrix(
+    SummarizedExperiment::assays(se)[[assay]])[, rownames(pheno)]
+  
+  ## RNASeq data:
+  ## convert to DGEList object and calculate normalization factors
+  if (assay == "counts") {
+    expr = edgeR::DGEList(counts = expr)
+    expr = edgeR:: calcNormFactors(
+      object = expr)
+  }
+
+  ## surrogate variables
+  if (sv) {
+    info.sv = estimate_surrogate_var(
+      expr = expr,
+      pheno = pheno,
+      var = var)
+    n.sv = info.sv$n.sv
+    if (n.sv > 0) {
+       pheno = info.sv$pheno
+       covar = c(covar, 
+                 paste0("sv_", 1:n.sv))
+    }
+  } else {
+    n.sv = 0
+  }
+
+  ## define formulas for linear (mixed) model
+  form = paste0("~", var)
+  if (!is.null(covar)) {
+    form = paste0(form, "+",
+                  paste(covar, collapse = "+"))
+  }
+  if (!is.null(var.id)) {
+    form.random = paste0("(1|", var.id, ")")
+    form = paste(form, form.random, sep = " + ")
+  }
+  
+  ## voom transformation for RNASeq data
+  if (assay == "counts") {
+    mod = stats::model.matrix(
+      stats::as.formula(form),
+      data = pheno)
+    expr = limma::voom(
+      counts = expr,
+      design = mod);
+  }
   
   ## standardize per gene
   if (standardize) {
-    expr = t(apply(expr, 1, function(x) {
-      (x - mean(x, nar.rm = TRUE)) / stats::sd(x, na.rm = TRUE)}))
-  }
-  
-  ## add VOOM weights
-  if (!is.null(assay.voom.weights)) {
-    if (!(assay.voom.weights %in% names(SummarizedExperiment::assays(se)))) {
-      stop(paste(assay, "not available in assays!"))
+    if (assay == "counts") { ## RNASeq
+      expr$E = t(apply(expr$E, 1, function(x) {
+        (x - mean(x, nar.rm = TRUE)) / stats::sd(x, na.rm = TRUE)}))
+    } else {
+      expr = t(apply(expr, 1, function(x) {
+        (x - mean(x, nar.rm = TRUE)) / stats::sd(x, na.rm = TRUE)}))
     }
-    weights = SummarizedExperiment::assays(se)[[assay.voom.weights]]
-    expr = methods::new("EList",
-                        list(E = expr,
-                             weights = weights))
   }
 
   ## differential expression analysis
@@ -151,6 +192,7 @@ run_diff_expr_analysis <- function(
   res = data.frame(
     gene = rownames(res),
     res,
+    n.sv = n.sv,
     stringsAsFactors = FALSE)
   
   ## add information about genes
@@ -160,12 +202,84 @@ run_diff_expr_analysis <- function(
     by.x = "gene",
     by.y = "row.names")
 
-  ## save in file
+  ## save gene level results in file
   rio::export(res,
               file = res.file)
-  return(res)
   
+  ## save surrogate variables in file
+  if (n.sv > 0 & !is.null(sv.file)) {
+    rio::export(pheno[, grep("sv_", colnames(pheno)), drop = FALSE],
+                file = sv.file,
+                row.names = TRUE)
+  }
+
 }
+
+#' internal function
+#' @keywords internal
+estimate_surrogate_var <- function(
+    expr,
+    pheno,
+    var) {
+  
+  ## model with variable of interest
+  mod = stats::model.matrix(
+    stats::as.formula(paste0("~",  var)),
+    data = pheno)
+  
+  ## null model
+  mod0 = stats::model.matrix(~1,
+                      data = pheno) 
+  
+  ## estimate normalized counts for RNASeq data
+  if (methods::is(expr, "DGEList")) {
+    expr = edgeR::cpm(expr, log = FALSE)
+  }
+
+  ## estimate surrogate variables
+  n.sv = sva::num.sv(
+    dat = expr,
+    mod = mod,
+    method = "leek")
+  
+  if (n.sv > 0) {
+    
+    if (n.sv > 5) {
+      warning(
+        paste("number of estimated surrogate variables",
+              n.sv,
+              "is restricted to 5!"))
+      n.sv = 5
+    }
+    if (methods::is(expr, "DGEList")) { # RNASeq
+      svobj = sva::svaseq(
+        dat = expr,
+        mod = mod,
+        mod0 = mod0,
+        n.sv = n.sv)
+    } else {
+      svobj = sva::sva(
+        dat = expr,
+        mod = mod,
+        mod0 = mod0,
+        n.sv = n.sv)
+    }
+    sv = svobj$sv
+    colnames(sv) = paste0("sv_", 1:ncol(sv))
+    
+    if (length(intersect(colnames(pheno), colnames(sv))) > 0) {
+      stop("surrogate variables already available in colData")
+    }
+    
+    pheno = data.frame(pheno, sv)
+  } else {
+    warning("number of estimated surrogate variables is zero")
+  }
+  return(list(n.sv = n.sv,
+              pheno = pheno))
+}
+
+
 
 #' internal function
 #' @keywords internal

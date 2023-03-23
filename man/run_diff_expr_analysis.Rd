@@ -7,11 +7,12 @@
 run_diff_expr_analysis(
   se,
   assay,
-  assay.voom.weights = NULL,
   var,
   covar = NULL,
   var.id = NULL,
   var.ref.level = NULL,
+  sv = FALSE,
+  sv.file = NULL,
   standardize = TRUE,
   res.file,
   BPPARAM = BiocParallel::bpparam()
@@ -21,10 +22,7 @@ run_diff_expr_analysis(
 \item{se}{[SummarizedExperiment object] study data.}
 
 \item{assay}{[character(1)] name of assay with expression data for the 
-differential expression analysis.}
-
-\item{assay.voom.weights}{[character(1)] name of assay with weights from 
-\code{\link[limma]{voom}} transformed (might be applied to RNAseq data).}
+differential expression analysis. Needs to be "counts" for RNASeq data.}
 
 \item{var}{[character(1)] name of variable of interest (e.g. group 
 definition); needs to be available in colData() of se.}
@@ -39,10 +37,17 @@ with subject identifers as random effect is fitted.}
 \item{var.ref.level}{[character(1)] name of reference category for variable
 of interest.}
 
+\item{sv}{[logical(1)] should surrogate variables be estimated and used as 
+(additional) covariates? (default: FALSE).}
+
+\item{sv.file}{[character(1)] name of file for saving surrogate variables
+(default: NULL so that surrogate variables are not saved). Note that no file
+will be created if no surrogate variables could be identified.}
+
 \item{standardize}{[logical(1)] should expression values be standardized (centered
 and scaled) before analysis? (default: TRUE).}
 
-\item{res.file}{[character(1)] name of file for saving results.}
+\item{res.file}{[character(1)] name of file for saving gene level results.}
 
 \item{BPPARAM}{[bpparamClass] parameters for parallel evaluation (see
 \code{\link[BiocParallel]{bpparam}} for more information).}
@@ -55,9 +60,9 @@ identifier as random effect is used based on the function
 implemented in \code{\link[limma]{lmFit}} is fitted.
 }
 \details{
-This function writes a file with the following results of the differential
-expression analysis for each gene (see \code{\link[limma]{topTable}} for 
-more information):
+This function writes a file with the following results of the 
+differential expression analysis for each gene (see 
+\code{\link[limma]{topTable}} for more information):
 \itemize{
 \item gene = gene name (corresponding to rownames() of se)
 \item logFC = log2 fold change corresponding to beta estimate of var
