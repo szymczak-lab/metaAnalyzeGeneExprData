@@ -9,7 +9,7 @@ run_diff_expr_analysis()
 ## new features
 
 run_diff_expr_analysis()
-- estimating and adjusting for surrogate variables
+- estimating and adjusting for surrogate variables (including plots)
 
 # metaAnalyzeGeneExprData 0.0.0.9001
 

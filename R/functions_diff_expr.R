@@ -42,8 +42,11 @@
 #' @param sv [logical(1)] should surrogate variables be estimated and used as 
 #' (additional) covariates? (default: FALSE).
 #' @param sv.file [character(1)] name of file for saving surrogate variables
-#' (default: NULL so that surrogate variables are not saved). Note that no file
-#' will be created if no surrogate variables could be identified.
+#' (default: NULL so that surrogate variables are not saved).
+#' @param sv.var.check [character(n)] name of variables in colData() of se that
+#' should be checked for association with surrogate variables (default: NULL).
+#' @param title [character(1)] title used in plots for surrogate variables, 
+#' i.e. only used if sv = TRUE (default: NULL).
 #' @param standardize [logical(1)] should expression values be standardized (centered
 #' and scaled) before analysis? (default: TRUE).
 #' @param res.file [character(1)] name of file for saving gene level results.
@@ -60,6 +63,8 @@ run_diff_expr_analysis <- function(
   var.ref.level = NULL,
   sv = FALSE,
   sv.file = NULL,
+  sv.var.check = NULL,
+  title = NULL,
   standardize = TRUE,
   res.file,
   BPPARAM = BiocParallel::bpparam()) {
@@ -70,14 +75,49 @@ run_diff_expr_analysis <- function(
   }
   
   ## extract phenotype data
+  if (!is.null(sv.var.check)) {
+    sv.var.check = intersect(sv.var.check,
+                             colnames(SummarizedExperiment::colData(se)))
+  }
+#  print(all(c(var, covar, sv.var.check, var.id) %in%
+#               colnames(colData(se))))
   pheno = as.data.frame(
-    SummarizedExperiment::colData(se)[, c(var, covar, var.id), drop = FALSE])
+    SummarizedExperiment::colData(se)[, c(var, covar, sv.var.check, var.id), 
+                                      drop = FALSE])
   
   ## remove individuals with missing values
-  pheno = stats::na.omit(pheno)
+  #pheno = stats::na.omit(pheno)
   if (nrow(pheno) < 3) {
     stop("less than 3 observations for analysis!")
   }
+  
+  # ## extract phenotype data
+  # if (!is.null(sv.var.check)) {
+  #   sv.var.check = intersect(sv.var.check,
+  #                            colnames(colData(se)))
+  # }
+  # # print(all(c(var, covar, sv.var.check, var.id) %in%
+  # #             colnames(colData(se))))
+  # # print(sv.var.check)
+  # pheno = as.data.frame(
+  #   SummarizedExperiment::colData(se)[, c(
+  #     var, covar, sv.var.check, var.id), drop = FALSE])
+  #  print(dim(pheno))
+  #  print(colnames(pheno))
+  # 
+  # ## remove individuals with missing values
+  # # is.na = apply(pheno[, c(var, covar, var.id), drop = FALSE], 2, function(x) {
+  # #   is.na(x)})
+  # # ind.keep = which(base::rowSums(is.na) == 0)
+  # # print(ind.keep)
+  # # pheno = pheno[ind.keep, ]
+  # # print(dim(pheno))
+  # # if (nrow(pheno) < 3) {
+  # #   stop("less than 3 observations for analysis!")
+  # # }
+  # # print(head(pheno))
+  # # print(dim(pheno))
+  # # print(colnames(pheno))
   
   ## set reference level
   if (!is.null(var.ref.level)) {
@@ -105,20 +145,17 @@ run_diff_expr_analysis <- function(
 
   ## surrogate variables
   if (sv) {
-    info.sv = estimate_surrogate_var(
+    pheno = estimate_surrogate_var(
       expr = expr,
       pheno = pheno,
-      var = var)
-    n.sv = info.sv$n.sv
-    if (n.sv > 0) {
-       pheno = info.sv$pheno
-       covar = c(covar, 
-                 paste0("sv_", 1:n.sv))
-    }
-  } else {
-    n.sv = 0
+      var = var,
+      sv.var.check = sv.var.check,
+      title = title)
+    covar = c(covar, 
+              grep("sv_", colnames(pheno), value = TRUE))
   }
-
+#  print(dim(pheno))
+  
   ## define formulas for linear (mixed) model
   form = paste0("~", var)
   if (!is.null(covar)) {
@@ -166,7 +203,7 @@ run_diff_expr_analysis <- function(
       data = pheno, 
       BPPARAM = BPPARAM)
   }
-  
+
   ## extract results and adjust for multiple testing
   res = limma::topTable(
     fit,
@@ -175,6 +212,7 @@ run_diff_expr_analysis <- function(
     adjust.method = "BH",
     sort.by = "none")
   res$B = NULL
+#  print(res)
   
   ## calculate SE
   res$SE = res$logFC / res$t
@@ -189,13 +227,14 @@ run_diff_expr_analysis <- function(
   }
   
   ## store results in data.frame
+#  print(res)
   res = data.frame(
     gene = rownames(res),
     res,
-    n.sv = n.sv,
     stringsAsFactors = FALSE)
   
   ## add information about genes
+#  print(res)
   res = merge(
     res,
     as.data.frame(SummarizedExperiment::rowData(se)),
@@ -207,7 +246,7 @@ run_diff_expr_analysis <- function(
               file = res.file)
   
   ## save surrogate variables in file
-  if (n.sv > 0 & !is.null(sv.file)) {
+  if (sv & !is.null(sv.file)) {
     rio::export(pheno[, grep("sv_", colnames(pheno)), drop = FALSE],
                 file = sv.file,
                 row.names = TRUE)
@@ -220,8 +259,13 @@ run_diff_expr_analysis <- function(
 estimate_surrogate_var <- function(
     expr,
     pheno,
-    var) {
-  
+    var,
+    sv.var.check,
+    title) {
+
+  ## always estimate 5 surrogate variables
+  n.sv = 5
+    
   ## model with variable of interest
   mod = stats::model.matrix(
     stats::as.formula(paste0("~",  var)),
@@ -237,49 +281,167 @@ estimate_surrogate_var <- function(
   }
 
   ## estimate surrogate variables
-  n.sv = sva::num.sv(
-    dat = expr,
-    mod = mod,
-    method = "leek")
+  #n.sv = sva::num.sv(
+  #  dat = expr,
+  #  mod = mod,
+  #  method = "leek")
   
-  if (n.sv > 0) {
-    
-    if (n.sv > 5) {
-      warning(
-        paste("number of estimated surrogate variables",
-              n.sv,
-              "is restricted to 5!"))
-      n.sv = 5
-    }
-    if (methods::is(expr, "DGEList")) { # RNASeq
-      svobj = sva::svaseq(
-        dat = expr,
-        mod = mod,
-        mod0 = mod0,
-        n.sv = n.sv)
-    } else {
-      svobj = sva::sva(
-        dat = expr,
-        mod = mod,
-        mod0 = mod0,
-        n.sv = n.sv)
-    }
-    sv = svobj$sv
-    colnames(sv) = paste0("sv_", 1:ncol(sv))
-    
-    if (length(intersect(colnames(pheno), colnames(sv))) > 0) {
-      stop("surrogate variables already available in colData")
-    }
-    
-    pheno = data.frame(pheno, sv)
+  if (methods::is(expr, "DGEList")) { # RNASeq
+    svaobj = sva::svaseq(
+      dat = expr,
+      mod = mod,
+      mod0 = mod0,
+      n.sv = n.sv)
   } else {
-    warning("number of estimated surrogate variables is zero")
+    svaobj = sva::sva(
+      dat = expr,
+      mod = mod,
+      mod0 = mod0,
+      n.sv = n.sv)
   }
-  return(list(n.sv = n.sv,
-              pheno = pheno))
+  
+#  print("pheno after sv estimation")
+#  print(dim(pheno))
+#  print(pheno)
+#  print(pheno[1:6,])
+  
+  plot_variance_explained_surrogate_var(
+    svaobj = svaobj,
+    expr = expr,
+    title = title)
+  
+  sv = svaobj$sv
+  colnames(sv) = paste0("sv_", 1:ncol(sv))
+#  print(head(sv))
+  
+  if (length(intersect(colnames(pheno), colnames(sv))) > 0) {
+    stop("surrogate variables already available in colData")
+  }
+#  print("pheno")
+#  print(head(pheno))
+  pheno = data.frame(pheno, sv)
+#  print("pheno with sv")
+#  print(head(pheno))
+  
+  plot_association_surrogate_var(
+    pheno = pheno,
+    sv.var.check = sv.var.check,
+    title = title)
+    
+  return(pheno)
 }
 
 
+
+#' internal function
+#' 
+#' based on code from
+#' https://support.bioconductor.org/p/88553/
+#' 
+#' @keywords internal
+plot_variance_explained_surrogate_var <- function(
+    svaobj,
+    expr, 
+    title = "") {
+  
+  pprob = svaobj$pprob.gam*(1 - svaobj$pprob.b)
+  dats = expr * pprob
+  dats = dats - base::rowMeans(dats)
+  uu = base::eigen(t(dats) %*% dats)
+  uu_val = uu$values / sum(uu$values)
+  
+  x_val = 1:svaobj$n.sv
+  expl_var_plot = data.frame(
+    no = 1:svaobj$n.sv, 
+    var.expl = uu_val[1:svaobj$n.sv])
+  
+  g = ggpubr::ggdotchart(
+    expl_var_plot,
+    x = "no",
+    y = "var.expl",
+    xlab = "surrogate variable",
+    ylab = "Proportion of variance explained",
+    dot.size = 2,
+    title = title,
+    sorting = "descending",
+    ylim = c(0, max(expl_var_plot$var.expl))) +
+    ggpubr::rotate_x_text(0)
+  print(g)
+}
+
+
+#' internal function
+#' 
+#' @keywords internal
+plot_association_surrogate_var <- function(
+  pheno,
+  sv.var.check,
+  title) {
+  
+  r.sq = NULL
+  var.used = NULL
+  for (v in sv.var.check) {
+    
+    if (v %in% colnames(pheno) & 
+        !all(is.na(pheno[, v])) &
+        length(unique(pheno[, v])) > 1) {
+#      print(paste("analyzing variable", v))
+      
+      group = pheno[, v]
+      
+      n.sv = length(grep("^sv_", colnames(pheno)))
+#      print(n.sv)
+      r.sq.v = NULL
+      for (j in 1:n.sv) {
+        x = pheno[, paste0("sv_", j)]
+      
+        ## using code from check_batch_effects() in QCnormSE
+        fit = stats::lm(x ~ group)
+        s = summary(fit)
+        r.sq.v[j] = s$adj.r.squared
+      }
+      r.sq = rbind(r.sq, r.sq.v)
+      var.used = c(var.used, v)
+      
+    }
+  }
+  dimnames(r.sq) = list(var.used, 
+                        paste0("sv_", 1:ncol(r.sq)))
+
+  g = plot_heatmap(
+    matrix = abs(stats::na.omit(r.sq)), 
+    title = title)
+  print(g)
+
+}
+
+#' internal function
+#' @keywords internal
+plot_heatmap <- function(
+    matrix,
+    title = NULL) {
+  
+    col = circlize::colorRamp2(
+      c(0, 1),
+      c("white", "blue"))
+    name = "|r^2|"
+    
+  hm = ComplexHeatmap::Heatmap(
+    matrix,
+    rect_gp = grid::gpar(col = "black"),
+    name = name,
+    col = col,
+    cluster_rows = FALSE,
+    cluster_columns = FALSE,
+    heatmap_legend_param = list(border = "black"),
+    row_names_side = "left",
+    column_names_side = "top",
+    column_names_rot = 45,
+    column_title = title)
+  
+  return(hm)
+  
+}
 
 #' internal function
 #' @keywords internal

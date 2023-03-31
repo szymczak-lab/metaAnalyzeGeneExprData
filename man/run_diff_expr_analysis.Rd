@@ -13,6 +13,8 @@ run_diff_expr_analysis(
   var.ref.level = NULL,
   sv = FALSE,
   sv.file = NULL,
+  sv.var.check = NULL,
+  title = NULL,
   standardize = TRUE,
   res.file,
   BPPARAM = BiocParallel::bpparam()
@@ -41,8 +43,13 @@ of interest.}
 (additional) covariates? (default: FALSE).}
 
 \item{sv.file}{[character(1)] name of file for saving surrogate variables
-(default: NULL so that surrogate variables are not saved). Note that no file
-will be created if no surrogate variables could be identified.}
+(default: NULL so that surrogate variables are not saved).}
+
+\item{sv.var.check}{[character(n)] name of variables in colData() of se that
+should be checked for association with surrogate variables (default: NULL).}
+
+\item{title}{[character(1)] title used in plots for surrogate variables, 
+i.e. only used if sv = TRUE (default: NULL).}
 
 \item{standardize}{[logical(1)] should expression values be standardized (centered
 and scaled) before analysis? (default: TRUE).}
