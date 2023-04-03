@@ -79,46 +79,10 @@ run_diff_expr_analysis <- function(
     sv.var.check = intersect(sv.var.check,
                              colnames(SummarizedExperiment::colData(se)))
   }
-#  print(all(c(var, covar, sv.var.check, var.id) %in%
-#               colnames(colData(se))))
   pheno = as.data.frame(
     SummarizedExperiment::colData(se)[, c(var, covar, sv.var.check, var.id), 
                                       drop = FALSE])
-  
-  ## remove individuals with missing values
-  #pheno = stats::na.omit(pheno)
-  if (nrow(pheno) < 3) {
-    stop("less than 3 observations for analysis!")
-  }
-  
-  # ## extract phenotype data
-  # if (!is.null(sv.var.check)) {
-  #   sv.var.check = intersect(sv.var.check,
-  #                            colnames(colData(se)))
-  # }
-  # # print(all(c(var, covar, sv.var.check, var.id) %in%
-  # #             colnames(colData(se))))
-  # # print(sv.var.check)
-  # pheno = as.data.frame(
-  #   SummarizedExperiment::colData(se)[, c(
-  #     var, covar, sv.var.check, var.id), drop = FALSE])
-  #  print(dim(pheno))
-  #  print(colnames(pheno))
-  # 
-  # ## remove individuals with missing values
-  # # is.na = apply(pheno[, c(var, covar, var.id), drop = FALSE], 2, function(x) {
-  # #   is.na(x)})
-  # # ind.keep = which(base::rowSums(is.na) == 0)
-  # # print(ind.keep)
-  # # pheno = pheno[ind.keep, ]
-  # # print(dim(pheno))
-  # # if (nrow(pheno) < 3) {
-  # #   stop("less than 3 observations for analysis!")
-  # # }
-  # # print(head(pheno))
-  # # print(dim(pheno))
-  # # print(colnames(pheno))
-  
+
   ## set reference level
   if (!is.null(var.ref.level)) {
     if (length(unique(pheno[, var])) > 5) {
@@ -154,8 +118,7 @@ run_diff_expr_analysis <- function(
     covar = c(covar, 
               grep("sv_", colnames(pheno), value = TRUE))
   }
-#  print(dim(pheno))
-  
+
   ## define formulas for linear (mixed) model
   form = paste0("~", var)
   if (!is.null(covar)) {
@@ -212,8 +175,7 @@ run_diff_expr_analysis <- function(
     adjust.method = "BH",
     sort.by = "none")
   res$B = NULL
-#  print(res)
-  
+
   ## calculate SE
   res$SE = res$logFC / res$t
   
@@ -227,14 +189,12 @@ run_diff_expr_analysis <- function(
   }
   
   ## store results in data.frame
-#  print(res)
   res = data.frame(
     gene = rownames(res),
     res,
     stringsAsFactors = FALSE)
   
   ## add information about genes
-#  print(res)
   res = merge(
     res,
     as.data.frame(SummarizedExperiment::rowData(se)),
@@ -300,11 +260,6 @@ estimate_surrogate_var <- function(
       n.sv = n.sv)
   }
   
-#  print("pheno after sv estimation")
-#  print(dim(pheno))
-#  print(pheno)
-#  print(pheno[1:6,])
-  
   plot_variance_explained_surrogate_var(
     svaobj = svaobj,
     expr = expr,
@@ -312,22 +267,19 @@ estimate_surrogate_var <- function(
   
   sv = svaobj$sv
   colnames(sv) = paste0("sv_", 1:ncol(sv))
-#  print(head(sv))
-  
+
   if (length(intersect(colnames(pheno), colnames(sv))) > 0) {
     stop("surrogate variables already available in colData")
   }
-#  print("pheno")
-#  print(head(pheno))
   pheno = data.frame(pheno, sv)
-#  print("pheno with sv")
-#  print(head(pheno))
+
+  if (!is.null(sv.var.check)) {
+    plot_association_surrogate_var(
+      pheno = pheno,
+      sv.var.check = sv.var.check,
+      title = title)
+  }
   
-  plot_association_surrogate_var(
-    pheno = pheno,
-    sv.var.check = sv.var.check,
-    title = title)
-    
   return(pheno)
 }
 
@@ -378,6 +330,9 @@ plot_association_surrogate_var <- function(
   sv.var.check,
   title) {
   
+  if (is.null(sv.var.check)) {
+    stop("sv.var.check needs to be defined")
+  }
   r.sq = NULL
   var.used = NULL
   for (v in sv.var.check) {
@@ -390,7 +345,6 @@ plot_association_surrogate_var <- function(
       group = pheno[, v]
       
       n.sv = length(grep("^sv_", colnames(pheno)))
-#      print(n.sv)
       r.sq.v = NULL
       for (j in 1:n.sv) {
         x = pheno[, paste0("sv_", j)]
