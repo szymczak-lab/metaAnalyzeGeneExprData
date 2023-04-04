@@ -133,7 +133,7 @@ run_diff_expr_analysis <- function(
   ## voom transformation for RNASeq data
   if (assay == "counts") {
     mod = stats::model.matrix(
-      stats::as.formula(form),
+      stats::as.formula(paste0("~", var)),
       data = pheno)
     expr = limma::voom(
       counts = expr,
