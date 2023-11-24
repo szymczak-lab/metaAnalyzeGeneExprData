@@ -1,7 +1,7 @@
 Package: metaAnalyzeGeneExprData
 Type: Package
 Title: Meta-analysis of gene expression data sets
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: person("Silke", "Szymczak", email = "silke.szymczak@uni-luebeck.de",
   role = c("aut", "cre"))
 Description: Integrate results of multiple gene expression data sets using 
@@ -14,6 +14,7 @@ License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Imports: 
+    BiocParallel,
     circlize,
     ComplexHeatmap,
     cowplot,

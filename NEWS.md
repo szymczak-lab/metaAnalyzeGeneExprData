@@ -1,4 +1,14 @@
 
+# metaAnalyzeGeneExprData 0.1.1
+
+## bug fixes
+
+estimate_surrogate_var() (internal function)  
+- use svaseq for count data and not erroneously sva  
+- remove genes with total count = 0  
+- remove variables that should be checked for association with surrogate 
+variables if they contain only missing values
+
 # metaAnalyzeGeneExprData 0.1.0
 
 ## modifications

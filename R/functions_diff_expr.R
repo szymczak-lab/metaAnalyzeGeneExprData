@@ -80,9 +80,15 @@ run_diff_expr_analysis <- function(
                              colnames(SummarizedExperiment::colData(se)))
   }
   pheno = as.data.frame(
-    SummarizedExperiment::colData(se)[, c(var, covar, sv.var.check, var.id), 
-                                      drop = FALSE])
+    SummarizedExperiment::colData(se)[, c(
+      var, covar, sv.var.check, var.id), 
+      drop = FALSE])
 
+  ## remove variables with only NAs
+  all.na = apply(pheno, 2, function(x) {all(is.na(x))})
+  pheno = pheno[, !all.na, drop = FALSE]
+  sv.var.check = setdiff(colnames(pheno), var)
+  
   ## set reference level
   if (!is.null(var.ref.level)) {
     if (length(unique(pheno[, var])) > 5) {
@@ -237,7 +243,14 @@ estimate_surrogate_var <- function(
   
   ## estimate normalized counts for RNASeq data
   if (methods::is(expr, "DGEList")) {
+    type = "rnaseq"
     expr = edgeR::cpm(expr, log = FALSE)
+    
+    ## remove genes with total count = 0
+    sum = apply(expr, 1, sum)
+    expr = expr[sum > 0, ]
+  } else {
+    type = "array"
   }
 
   ## estimate surrogate variables
@@ -246,7 +259,7 @@ estimate_surrogate_var <- function(
   #  mod = mod,
   #  method = "leek")
   
-  if (methods::is(expr, "DGEList")) { # RNASeq
+  if (type == "rnaseq") { # RNASeq
     svaobj = sva::svaseq(
       dat = expr,
       mod = mod,
@@ -273,7 +286,7 @@ estimate_surrogate_var <- function(
   }
   pheno = data.frame(pheno, sv)
 
-  if (!is.null(sv.var.check)) {
+  if (!is.null(sv.var.check) & length(sv.var.check) > 0) {
     plot_association_surrogate_var(
       pheno = pheno,
       sv.var.check = sv.var.check,
