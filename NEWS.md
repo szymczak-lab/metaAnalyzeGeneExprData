@@ -1,4 +1,18 @@
 
+# metaAnalyzeGeneExprData 0.1.3
+
+## new features
+
+run_diff_expr_analysis()
+added fixing of covariates for estimation of surrogate variable 
+
+# metaAnalyzeGeneExprData 0.1.2
+
+## new features
+
+run_diff_expr_analysis()
+adjusting for covariates (not yet implemented for surrogate variables or mixed model)
+
 # metaAnalyzeGeneExprData 0.1.1
 
 ## bug fixes

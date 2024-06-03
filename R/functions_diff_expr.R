@@ -41,6 +41,7 @@
 #' of interest.
 #' @param sv [logical(1)] should surrogate variables be estimated and used as 
 #' (additional) covariates? (default: FALSE).
+#' @param n.sv [numeric(1)] number of surrogate variables to be estimated
 #' @param sv.file [character(1)] name of file for saving surrogate variables
 #' (default: NULL so that surrogate variables are not saved).
 #' @param sv.var.check [character(n)] name of variables in colData() of se that
@@ -62,6 +63,7 @@ run_diff_expr_analysis <- function(
   var.id = NULL,
   var.ref.level = NULL,
   sv = FALSE,
+  n.sv = 5,
   sv.file = NULL,
   sv.var.check = NULL,
   title = NULL,
@@ -69,9 +71,8 @@ run_diff_expr_analysis <- function(
   res.file,
   BPPARAM = BiocParallel::bpparam()) {
   
-  if (!is.null(covar)) {
-    ## check covariates in sva and voom 
-    stop("covariate adjustment not yet implemented for RNASeq!")
+  if (!is.null(covar) & (!is.null(var.id))) {
+    stop("covariate adjustment not yet implemented for mixed model!")
   }
   
   ## extract phenotype data
@@ -80,14 +81,27 @@ run_diff_expr_analysis <- function(
                              colnames(SummarizedExperiment::colData(se)))
   }
   pheno = as.data.frame(
-    SummarizedExperiment::colData(se)[, c(
-      var, covar, sv.var.check, var.id), 
+    SummarizedExperiment::colData(se)[, unique(c(
+      var, covar, sv.var.check, var.id)), 
       drop = FALSE])
+  ind.rm.l = apply(
+    pheno[, c(var, covar), drop = FALSE], 2, function(x) {
+    rownames(pheno)[which(is.na(x))]})
+  ind.rm = unique(unlist(ind.rm.l))
+  if (length(ind.rm) > 0) {
+    warning(paste(
+      "removed", length(ind.rm), "individuals because of missing 
+      values in variable of interest or covariate(s)"))
+    pheno = pheno[setdiff(rownames(pheno), ind.rm), ]
+    se = se[, rownames(pheno)]
+  }
 
   ## remove variables with only NAs
   all.na = apply(pheno, 2, function(x) {all(is.na(x))})
   pheno = pheno[, !all.na, drop = FALSE]
-  sv.var.check = setdiff(colnames(pheno), var)
+  if (!is.null(sv.var.check)) {
+    sv.var.check = setdiff(colnames(pheno), var)
+  }
   
   ## set reference level
   if (!is.null(var.ref.level)) {
@@ -109,7 +123,7 @@ run_diff_expr_analysis <- function(
   ## convert to DGEList object and calculate normalization factors
   if (assay == "counts") {
     expr = edgeR::DGEList(counts = expr)
-    expr = edgeR:: calcNormFactors(
+    expr = edgeR::calcNormFactors(
       object = expr)
   }
 
@@ -119,6 +133,8 @@ run_diff_expr_analysis <- function(
       expr = expr,
       pheno = pheno,
       var = var,
+      covar = covar,
+      n.sv = n.sv,
       sv.var.check = sv.var.check,
       title = title)
     covar = c(covar, 
@@ -139,11 +155,11 @@ run_diff_expr_analysis <- function(
   ## voom transformation for RNASeq data
   if (assay == "counts") {
     mod = stats::model.matrix(
-      stats::as.formula(paste0("~", var)),
+      stats::as.formula(form),
       data = pheno)
     expr = limma::voom(
       counts = expr,
-      design = mod);
+      design = mod)
   }
   
   ## standardize per gene
@@ -226,20 +242,26 @@ estimate_surrogate_var <- function(
     expr,
     pheno,
     var,
+    covar = NULL,
+    n.sv = 5,
     sv.var.check,
     title) {
 
   ## always estimate 5 surrogate variables
-  n.sv = 5
+  #n.sv = 5
     
   ## model with variable of interest
   mod = stats::model.matrix(
-    stats::as.formula(paste0("~",  var)),
+    stats::as.formula(paste0(
+      "~",  
+      paste(
+        c(var, covar), 
+        collapse = "+"))),
     data = pheno)
   
   ## null model
   mod0 = stats::model.matrix(~1,
-                      data = pheno) 
+                             data = pheno) 
   
   ## estimate normalized counts for RNASeq data
   if (methods::is(expr, "DGEList")) {
