@@ -154,8 +154,18 @@ run_diff_expr_analysis <- function(
   
   ## voom transformation for RNASeq data
   if (assay == "counts") {
+    ## Note: cannot use formula with random effect in stats::model.matrix()
+    if (!is.null(var.id)) {
+      form.use = stats::as.formula(paste0("~", var))
+      if (!is.null(covar)) {
+        form.use = paste0(form.use, "+",
+                          paste(covar, collapse = "+"))
+      }
+    } else {
+      form.use = form
+    }
     mod = stats::model.matrix(
-      stats::as.formula(form),
+      stats::as.formula(form.use),
       data = pheno)
     expr = limma::voom(
       counts = expr,

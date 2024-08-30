@@ -12,6 +12,7 @@ run_diff_expr_analysis(
   var.id = NULL,
   var.ref.level = NULL,
   sv = FALSE,
+  n.sv = 5,
   sv.file = NULL,
   sv.var.check = NULL,
   title = NULL,
@@ -41,6 +42,8 @@ of interest.}
 
 \item{sv}{[logical(1)] should surrogate variables be estimated and used as 
 (additional) covariates? (default: FALSE).}
+
+\item{n.sv}{[numeric(1)] number of surrogate variables to be estimated}
 
 \item{sv.file}{[character(1)] name of file for saving surrogate variables
 (default: NULL so that surrogate variables are not saved).}

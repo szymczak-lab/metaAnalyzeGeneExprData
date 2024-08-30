@@ -1,4 +1,11 @@
 
+# metaAnalyzeGeneExprData 0.1.4
+
+## bug fix
+
+run_diff_expr_analysis()
+use formula without random effect for function voom()
+
 # metaAnalyzeGeneExprData 0.1.3
 
 ## new features

@@ -4,7 +4,15 @@
 \alias{estimate_surrogate_var}
 \title{internal function}
 \usage{
-estimate_surrogate_var(expr, pheno, var, sv.var.check, title)
+estimate_surrogate_var(
+  expr,
+  pheno,
+  var,
+  covar = NULL,
+  n.sv = 5,
+  sv.var.check,
+  title
+)
 }
 \description{
 internal function
